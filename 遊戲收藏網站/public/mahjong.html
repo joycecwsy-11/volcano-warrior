@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>青玉牌桌｜麻將練習</title>
+<style>
+:root{color-scheme:dark;--ink:#f9edda;--muted:#bdcfc5;--gold:#f6d086;--edge:#527c6a;font-family:system-ui,"Microsoft JhengHei",sans-serif;background:#0e2420;color:var(--ink)}
+*{box-sizing:border-box}
+body{margin:0}
+main{max-width:1160px;margin:auto;padding:clamp(12px,3vw,32px)}
+header,.bar,.status{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:Georgia,"Noto Serif CJK TC",serif;font-size:clamp(28px,6vw,46px);margin:2px 0}
+p{margin:0}
+.kicker{color:var(--gold);letter-spacing:.18em;font-size:12px}
+.muted{color:var(--muted);font-size:14px}
+button{font:inherit;cursor:pointer}
+button:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.control{background:#25493e;color:var(--ink);border:1px solid var(--edge);border-radius:8px;padding:9px 14px;min-height:42px}
+.control:hover{background:#335c4d}
+.primary{background:var(--gold);color:#302316;border-color:var(--gold);font-weight:700}
+.primary:hover{background:#ffe0a0}
+.table{margin:20px 0 14px;padding:clamp(10px,2.5vw,24px);border:1px solid #5c8573;border-radius:20px;background:radial-gradient(ellipse at 50% 20%,#255a47,#153b31 70%);box-shadow:0 12px 25px #0003}
+.seats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.seat{background:#0b2823bb;border:1px solid #426d5c;border-radius:11px;min-width:0;padding:8px}
+.seat.active{border-color:var(--gold)}
+.seat h2,.river h2,.player h2{font-size:14px;margin:0 0 6px}
+.backrow,.tiles,.melds{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.back{width:9px;height:15px;border:1px solid #a5bcb1;border-bottom:3px solid #17372d;border-radius:2px;background:#61937d}
+.rivers{margin:14px 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.river{padding:8px;border-radius:9px;background:#102d264d;min-height:65px}
+.river h2{color:var(--muted);font-size:12px}
+.status{border-top:1px solid #588272;border-bottom:1px solid #588272;min-height:54px;padding:8px 0;margin:10px 0 14px}
+#actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#hint{font-size:13px;color:var(--gold)}
+.player h2{font-size:16px}
+.handrow{display:flex;gap:10px 16px;flex-wrap:wrap;align-items:end}
+.drawn{display:flex;align-items:center;gap:7px}
+.drawn small{color:var(--gold);white-space:nowrap}
+.tile{--tile:clamp(43px,6.4vw,72px);width:var(--tile);height:calc(var(--tile)*1.29);flex:none;display:inline-grid;place-items:center;position:relative;padding:3px;color:#191d19;background:linear-gradient(#fff9e9,#f4e8cf);border:1px solid #cbb99c;border-bottom:5px solid #a09c7a;border-radius:7px;box-shadow:0 2px 2px #0004;font-family:serif;vertical-align:middle}
+button.tile:hover{transform:translateY(-3px);outline:2px solid var(--gold)}
+.tile.mini{--tile:clamp(23px,3vw,32px);border-radius:4px;border-bottom-width:3px;padding:1px}
+.tile.latest{outline:2px solid var(--gold)}
+.tile svg{width:100%;height:100%;overflow:visible}
+.tile.mini svg{width:95%}
+.melds:not(:empty){margin:6px 0 10px}
+.meld{display:flex;gap:2px;padding:3px;background:#0f2e25;border-radius:5px}
+details{margin-top:13px;color:var(--muted);font-size:14px}
+summary{cursor:pointer;color:var(--ink)}
+details p{margin:6px 0}
+@media(max-width:540px){.seat .backrow{gap:2px}.back{width:6px;height:11px}.rivers{gap:5px}.river{padding:5px}.tiles{gap:3px}}
+</style>
+</head>
+<body>
+<main>
+<header><div><p class="kicker">四人牌局</p><h1>青玉牌桌</h1><p class="muted">港式麻將練習 · 你與三位電腦對手</p></div><div><label for="hand-size">玩法</label> <select class="control" id="hand-size"><option value="13">13 張</option><option value="16">16 張</option></select> <button class="control" id="restart" type="button">依所選玩法開新局</button></div></header>
+<section class="table" aria-label="麻將牌桌">
+<div class="bar"><p class="muted" id="wall"></p><p class="muted" id="round"></p></div>
+<div id="seats" class="seats"></div>
+<div id="rivers" class="rivers"></div>
+<div class="status"><div><p id="message" aria-live="polite"></p><p id="hint"></p></div><div id="actions"></div></div>
+<section class="player" aria-label="你的牌"><h2>你的手牌</h2><div id="melds" class="melds"></div><div class="handrow"><div id="hand" class="tiles"></div><div id="drawn" class="drawn"></div></div></section>
+</section>
+<details><summary>玩法</summary><p>切換張數後，按「依所選玩法開新局」套用。存檔會記住目前牌局的張數。</p><p>你先打牌。輪到你時點一張牌打出；可吃、碰、胡或過時，按牌桌中央的按鈕。吃只接上家的牌。胡牌優先於碰與吃；同類操作以離出牌者最近的玩家優先。</p><p>採用剛才的入門玩法，13 張玩法為四組加一對，16 張玩法為五組加一對，包含自摸和接別人打出的牌。使用 136 張牌，每局由你坐東；這版暫未加入番數、花牌、槓和特殊胡牌牌型。</p></details>
+</main>
+<nav style="padding:10px;text-align:center"><a style="color:inherit" href="./">返回遊戲收藏</a> <span id="save-status" role="status"></span></nav><script src="./sync.js"></script><script>
+(async()=>{const sync=await connectGame('mahjong');
+
+"use strict";
+const byId = id => document.getElementById(id);
+const meldTarget = () => (game.handSize - 1) / 3;
+const seats = ["你・東家", "南家", "西家", "北家"];
+const ranks = "一二三四五六七八九";
+const honors = ["東","南","西","北","中","發","白"];
+const tileName = t => t < 27 ? ranks[t % 9] + ["萬","筒","索"][Math.floor(t / 9)] : honors[t - 27];
+const sorted = hand => [...hand].sort((a,b) => a-b);
+const count = hand => {
+  const counts = Array(34).fill(0);
+  hand.forEach(t => counts[t]++);
+  return counts;
+};
+function meldable(counts) {
+  const i = counts.findIndex(n => n > 0);
+  if (i < 0) return true;
+  if (counts[i] >= 3) {
+    counts[i] -= 3;
+    const win = meldable(counts);
+    counts[i] += 3;
+    if (win) return true;
+  }
+  if (i < 27 && i % 9 < 7 && counts[i+1] && counts[i+2]) {
+    counts[i]--; counts[i+1]--; counts[i+2]--;
+    const win = meldable(counts);
+    counts[i]++; counts[i+1]++; counts[i+2]++;
+    return win;
+  }
+  return false;
+}
+function canWin(hand, open) {
+  if (hand.length !== (meldTarget()-open)*3+2) return false;
+  const counts = count(hand);
+  for (let i=0; i<34; i++) {
+    if (counts[i] < 2) continue;
+    counts[i] -= 2;
+    const win = meldable(counts);
+    counts[i] += 2;
+    if (win) return true;
+  }
+  return false;
+}
+function distance(hand, open) {
+  const counts = count(hand);
+  const target = meldTarget();
+  let best = 2*target;
+  function visit(i, sets, partials, pair) {
+    while (i < 34 && counts[i] === 0) i++;
+    if (i === 34) {
+      best = Math.min(best, 2*target - 2*sets - Math.min(partials,target-sets) - pair);
+      return;
+    }
+    if (sets < target) {
+      if (counts[i] >= 3) {
+        counts[i] -= 3;
+        visit(i,sets+1,partials,pair);
+        counts[i] += 3;
+      }
+      if (i < 27 && i%9 < 7 && counts[i+1] && counts[i+2]) {
+        counts[i]--; counts[i+1]--; counts[i+2]--;
+        visit(i,sets+1,partials,pair);
+        counts[i]++; counts[i+1]++; counts[i+2]++;
+      }
+    }
+    if (counts[i] >= 2) {
+      counts[i] -= 2;
+      if (!pair) visit(i,sets,partials,1);
+      if (partials < target-sets) visit(i,sets,partials+1,pair);
+      counts[i] += 2;
+    }
+    if (i < 27 && partials < target-sets) {
+      for (const gap of [1,2]) {
+        if (i%9+gap > 8 || !counts[i+gap]) continue;
+        counts[i]--; counts[i+gap]--;
+        visit(i,sets,partials+1,pair);
+        counts[i]++; counts[i+gap]++;
+      }
+    }
+    counts[i]--;
+    visit(i,sets,partials,pair);
+    counts[i]++;
+  }
+  visit(0,open,0,0);
+  return best;
+}
+function bestDiscard(hand, open) {
+  let best = {score:Infinity,index:0,weight:-Infinity};
+  const counts = count(hand);
+  const seen = new Set();
+  hand.forEach((t,index) => {
+    if (seen.has(t)) return;
+    seen.add(t);
+    const rest = hand.filter((_,j) => j!==index);
+    const score = distance(rest,open);
+    let weight = t >= 27 ? 5 : Math.abs(t%9-4);
+    weight -= (counts[t]-1)*5;
+    if (t < 27) {
+      for (const delta of [-2,-1,1,2]) {
+        if (t%9+delta>=0 && t%9+delta<=8) weight -= counts[t+delta];
+      }
+    }
+    if (score < best.score || (score===best.score && weight>best.weight)) best = {score,index,weight};
+  });
+  return best;
+}
+function without(hand, tiles) {
+  const rest = [...hand];
+  for (const t of tiles) rest.splice(rest.indexOf(t),1);
+  return rest;
+}
+let game;
+let generation = 0;
+let timer;
+function later(callback) {
+  const id = generation;
+  timer = setTimeout(() => { if (id===generation) callback(); },430);
+}
+function newGame() {
+  clearTimeout(timer);
+  generation++;
+  const wall = Array.from({length:136},(_,i) => i%34);
+  for (let i=wall.length-1;i>0;i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [wall[i],wall[j]] = [wall[j],wall[i]];
+  }
+  const handSize = byId("hand-size").value === "16" ? 16 : 13;
+  const hands = Array.from({length:4},() => Array.from({length:handSize},() => wall.pop()));
+  game = {handSize,wall,hands,open:[[],[],[],[]],rivers:[[],[],[],[]],turn:0,phase:"draw",drawn:false,last:null,discards:0,result:null,message:""};
+  draw(0);
+}
+function draw(player) {
+  game.turn = player;
+  if (!game.wall.length) return finish(null,null,null,"牌牆摸完，流局。");
+  game.hands[player] = sorted(game.hands[player]);
+  game.hands[player].push(game.wall.pop());
+  game.drawn = true;
+  game.phase = "discard";
+  game.message = player===0 ? "輪到你。點一張牌打出。" : seats[player]+"摸牌中…";
+  render();
+  if (player!==0) later(botTurn);
+}
+function botTurn() {
+  const p = game.turn;
+  const hand = game.hands[p];
+  if (game.drawn && canWin(hand,game.open[p].length)) return finish(p,null,hand.at(-1));
+  discard(p,bestDiscard(hand,game.open[p].length).index);
+}
+function discard(player,index) {
+  if (game.phase!=="discard" || game.turn!==player) return;
+  const [tile] = game.hands[player].splice(index,1);
+  game.hands[player] = sorted(game.hands[player]);
+  game.rivers[player].push(tile);
+  game.last = {player,tile};
+  game.discards++;
+  game.drawn = false;
+  reactions();
+}
+const priority = {win:3,pung:2,chow:1};
+function claims(player, from, tile) {
+  const hand = game.hands[player];
+  const counts = count(hand);
+  const list = [];
+  if (canWin([...hand,tile],game.open[player].length)) list.push({player,type:"win",take:[]});
+  if (counts[tile]>=2) list.push({player,type:"pung",take:[tile,tile]});
+  if (player === (from+1)%4 && tile<27) {
+    for (let start=tile-2;start<=tile;start++) {
+      if (start<0 || Math.floor(start/9)!==Math.floor(tile/9) || start%9>6) continue;
+      const take = [start,start+1,start+2].filter(t=>t!==tile);
+      if (take.every(t=>counts[t])) list.push({player,type:"chow",take});
+    }
+  }
+  return list;
+}
+function reactions() {
+  const {player:from,tile} = game.last;
+  const order = (a,b) => priority[b.type]-priority[a.type] || (a.player-from+4)%4-(b.player-from+4)%4;
+  const bots = [];
+  for (let p=1;p<4;p++) {
+    if (p===from) continue;
+    const hand = game.hands[p];
+    const open = game.open[p].length;
+    for (const action of claims(p,from,tile)) {
+      if (action.type==="win" || bestDiscard(without(hand,action.take),open+1).score < distance(hand,open)) bots.push(action);
+    }
+  }
+  bots.sort(order);
+  const best = bots[0];
+  const mine = from===0 ? [] : claims(0,from,tile).filter(action => !best || order(action,best)<0);
+  game.message = from===0 ? "你已出牌。" : seats[from]+"打出一張牌。";
+  game.phase = mine.length ? "claim" : "wait";
+  game.pending = {mine,best};
+  render();
+  if (!mine.length) later(() => resolve(best));
+}
+function resolve(action) {
+  if (game.phase!=="claim" && game.phase!=="wait") return;
+  const {player:from,tile} = game.last;
+  if (!action) return draw((from+1)%4);
+  const p = action.player;
+  if (action.type==="win") return finish(p,from,tile);
+  game.rivers[from].pop();
+  game.last = null;
+  game.hands[p] = sorted(without(game.hands[p],action.take));
+  game.open[p].push(sorted([...action.take,tile]));
+  game.turn = p;
+  game.phase = "discard";
+  game.message = (p===0 ? "你" : seats[p]) + (action.type==="chow" ? "吃牌" : "碰牌") + (p===0 ? "。請打出一張。" : "，準備出牌…");
+  render();
+  if (p!==0) later(botTurn);
+}
+function finish(winner,from,tile,message) {
+  game.phase = "done";
+  game.result = {winner,from,tile};
+  if (winner!==null && from!==null) {
+    game.rivers[from].pop();
+    game.last = null;
+    game.hands[winner].push(tile);
+  }
+  game.message = message || ((winner===0 ? "你" : seats[winner])+(from===null ? "自摸！" : "胡牌！"+(from===0 ? "你" : seats[from])+"放銃。"));
+  render();
+}
+const red="#a22d38", green="#176343", blue="#214a74";
+const patterns = [
+  [[0,0]], [[0,-1],[0,1]], [[-1,-1],[0,0],[1,1]],
+  [[-1,-1],[1,-1],[-1,1],[1,1]], [[-1,-1],[1,-1],[0,0],[-1,1],[1,1]],
+  [[-1,-1],[1,-1],[-1,0],[1,0],[-1,1],[1,1]],
+  [[-1,-1],[1,-1],[-1,0],[0,0],[1,0],[-1,1],[1,1]],
+  [[-1,-1],[0,-1],[1,-1],[-1,1],[0,1],[1,1],[-1,0],[1,0]],
+  [[-1,-1],[0,-1],[1,-1],[-1,0],[0,0],[1,0],[-1,1],[0,1],[1,1]]
+];
+function face(tile) {
+  const n = tile%9+1;
+  let body;
+  if (tile<9) {
+    body = '<text x="25" y="29" fill="#20251e" font-size="24">'+ranks[n-1]+'</text><text x="25" y="53" fill="'+red+'" font-size="23">萬</text>';
+  } else if (tile<18) {
+    body = patterns[n-1].map(([x,y],i)=>{
+      const color = n===1 ? blue : [green,blue,red][i%3];
+      const radius = n===1 ? 14 : 5.1;
+      return '<circle cx="'+(25+x*14)+'" cy="'+(33+y*17)+'" r="'+radius+'" fill="none" stroke="'+color+'" stroke-width="2.1"/><circle cx="'+(25+x*14)+'" cy="'+(33+y*17)+'" r="'+(radius*.37)+'" fill="'+color+'"/>';
+    }).join("");
+  } else if (tile<27) {
+    body = n===1 ? '<path d="M16 50Q18 40 29 39Q24 32 27 24Q30 15 36 16L41 20L35 22Q36 34 30 42L22 48Z" fill="'+green+'"/><path d="M14 39L26 33L21 43Z" fill="'+red+'"/><circle cx="34" cy="20" r="1.4" fill="#fff5dc"/><path d="M15 54H34" stroke="'+green+'" stroke-width="3"/>'
+      : patterns[n-1].map(([x,y],i)=>{
+        const color = n>=5 && i===0 ? red : green;
+        return '<path d="M'+(25+x*14)+' '+(27+y*17)+'v12" stroke="'+color+'" stroke-width="4.5" stroke-linecap="round"/><path d="M'+(22+x*14)+' '+(32+y*17)+'h6" stroke="'+color+'" stroke-width="1.7"/>';
+      }).join("");
+  } else if (tile===33) {
+    body = '<rect x="12" y="13" width="26" height="40" rx="2" fill="none" stroke="'+blue+'" stroke-width="2.6"/><rect x="16" y="17" width="18" height="32" rx="1" fill="none" stroke="'+blue+'"/>';
+  } else {
+    body = '<text x="25" y="44" fill="'+(tile===31?red:tile===32?green:"#222920")+'" font-size="31">'+honors[tile-27]+'</text>';
+  }
+  return '<svg viewBox="0 0 50 66" aria-hidden="true" text-anchor="middle" font-weight="700" font-family="serif">'+body+'</svg>';
+}
+function makeTile(tile,{small=false,latest=false,click}={}) {
+  const el = document.createElement(click?"button":"span");
+  el.className = "tile"+(small?" mini":"")+(latest?" latest":"");
+  el.setAttribute("aria-label",tileName(tile));
+  el.innerHTML = face(tile);
+  if (click) {
+    el.type = "button";
+    el.addEventListener("click",click);
+  } else el.setAttribute("role","img");
+  return el;
+}
+function meldView(target,melds) {
+  for (const meld of melds) {
+    const group = document.createElement("div");
+    group.className = "meld";
+    group.append(...meld.map(t=>makeTile(t,{small:true})));
+    target.append(group);
+  }
+}
+function actionButton(text,click,primary=false) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "control"+(primary?" primary":"");
+  button.textContent = text;
+  button.addEventListener("click",click);
+  byId("actions").append(button);
+  return button;
+}
+function render() {
+  sync.save(game);
+  byId("wall").textContent = "牌牆剩 "+game.wall.length+" 張";
+  byId("round").textContent = "已打出 "+game.discards+" 張";
+  byId("message").textContent = game.message;
+  const zone = byId("seats");
+  zone.replaceChildren();
+  for (let p=1;p<4;p++) {
+    const panel = document.createElement("div");
+    panel.className = "seat"+(game.turn===p && game.phase!=="done"?" active":"");
+    const title = document.createElement("h2");
+    title.textContent = seats[p];
+    const row = document.createElement("div");
+    row.className = "backrow";
+    if (game.result?.winner===p) row.append(...sorted(game.hands[p]).map(t=>makeTile(t,{small:true})));
+    else {
+      row.setAttribute("aria-label",game.hands[p].length+" 張蓋牌");
+      for (const t of game.hands[p]) {
+        const back = document.createElement("span");
+        back.className = "back";
+        back.setAttribute("aria-hidden","true");
+        row.append(back);
+      }
+    }
+    const groups = document.createElement("div");
+    groups.className = "melds";
+    meldView(groups,game.open[p]);
+    panel.append(title,row,groups);
+    zone.append(panel);
+  }
+  const rivers = byId("rivers");
+  rivers.replaceChildren();
+  game.rivers.forEach((river,p)=>{
+    const panel = document.createElement("div");
+    panel.className = "river";
+    const title = document.createElement("h2");
+    title.textContent = seats[p]+" · 棄牌";
+    const tiles = document.createElement("div");
+    tiles.className = "tiles";
+    river.forEach((t,i)=>tiles.append(makeTile(t,{small:true,latest:game.last?.player===p && i===river.length-1})));
+    panel.append(title,tiles);
+    rivers.append(panel);
+  });
+  const hand = byId("hand"), drawn = byId("drawn"), melds = byId("melds");
+  hand.replaceChildren(); drawn.replaceChildren(); melds.replaceChildren();
+  meldView(melds,game.open[0]);
+  const playable = game.turn===0 && game.phase==="discard";
+  const separate = game.turn===0 && game.drawn;
+  game.hands[0].forEach((t,i)=>{
+    const element = makeTile(t,{click:playable ? ()=>discard(0,i) : null});
+    if (separate && i===game.hands[0].length-1) {
+      const label = document.createElement("small");
+      label.textContent = game.discards===0 ? "起手多拿" : "剛摸到";
+      drawn.append(label,element);
+    } else hand.append(element);
+  });
+  byId("actions").replaceChildren();
+  byId("hint").textContent = "";
+  if (playable && game.drawn && canWin(game.hands[0],game.open[0].length)) {
+    byId("hint").textContent = "這手可以自摸。";
+    actionButton("自摸",()=>finish(0,null,game.hands[0].at(-1)),true);
+  }
+  if (game.phase==="claim") {
+    byId("hint").textContent = "你可以接這張牌。";
+    for (const action of game.pending.mine) {
+      const button = actionButton({win:"胡",pung:"碰",chow:"吃"}[action.type],()=>resolve(action),action.type==="win");
+      if (action.type==="chow") {
+        const group = sorted([...action.take,game.last.tile]);
+        button.append(" ",...group.map(t=>makeTile(t,{small:true})));
+      }
+    }
+    actionButton("過",()=>resolve(game.pending.best));
+  }
+  if (game.phase==="done") actionButton("下一局",newGame,true);
+}
+byId("restart").addEventListener("click",newGame);
+if(sync.state){
+ game=sync.state;
+ game.handSize = game.handSize === 16 ? 16 : 13;
+ byId("hand-size").value = String(game.handSize);
+ render();
+ if(game.phase==='wait')later(()=>resolve(game.pending.best));
+ if(game.phase==='discard'&&game.turn!==0)later(botTurn);
+}else newGame();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>遊戲收藏</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#191418;color:#faecdf;font:1rem system-ui,sans-serif}main{max-width:800px;margin:auto;padding:clamp(24px,7vw,64px) 20px}h1{font-size:clamp(2rem,7vw,4rem);margin:0 0 24px}section,article{background:#292129;padding:20px;border:1px solid #665057;border-radius:16px}label{display:block;margin-bottom:8px}input,button,a.play{min-height:44px;padding:10px 14px;border-radius:8px;font:inherit}input{width:100%;background:#191418;border:1px solid #816870;color:inherit}button,a.play{background:#f2c185;color:#251810;border:0;font-weight:700;display:inline-grid;place-items:center;text-decoration:none;cursor:pointer}button{margin-top:10px}p{color:#e0cfc1}.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:20px}h2{margin-top:0}
+</style>
+<main><h1>遊戲收藏</h1>
+<section><label for="key">跨裝置同步碼</label><input id="key" placeholder="貼上另一台裝置的同步碼" autocomplete="off" spellcheck="false"><button id="use">連結裝置</button> <button id="create">建立同步碼</button><p id="status" role="status">在手機和電腦使用相同的同步碼，就能接續存檔。請妥善保管同步碼。</p></section>
+<div class="games">
+<article><h2>🌋 火山戰神 V31</h2><p>虛擬籌碼・倍率球分身</p><a class="play" href="./volcano.html">開始遊戲</a></article>
+<article><h2>🀄 麻將</h2><p>13／16 張・吃、碰、胡</p><a class="play" href="./mahjong.html">開始遊戲</a></article>
+</div></main>
+<script>
+const key=document.getElementById('key'), statusLine=document.getElementById('status');
+key.value=localStorage.getItem('arcade-key')||'';
+document.getElementById('use').onclick=async()=>{
+ const code=key.value.trim();
+ if(!/^[a-f0-9]{64}$/.test(code)){statusLine.textContent='請輸入完整的同步碼。';return}
+ try{
+  const result=await fetch('./api/link',{headers:{Authorization:'Bearer '+code}});
+  if(!result.ok)throw Error();
+  localStorage.setItem('arcade-key',code);
+  statusLine.textContent='裝置已連結。可以開啟遊戲繼續上次的進度。';
+ }catch{statusLine.textContent='連結失敗，請檢查同步碼和網路。'}
+};
+document.getElementById('create').onclick=async()=>{
+ try{
+  const result=await fetch('./api/link',{method:'POST'});
+  if(!result.ok)throw Error();
+  key.value=(await result.json()).code;
+  localStorage.setItem('arcade-key',key.value);
+  statusLine.textContent='同步碼已建立。請將這組同步碼貼到另一台裝置。';
+ }catch{statusLine.textContent='建立失敗，請確認網站伺服器已啟動。'}
+};
+</script>
+</html>
