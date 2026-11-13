@@ -1,0 +1,23 @@
+{
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "name": "火山戰神 V31",
+  "short_name": "火山戰神",
+  "lang": "zh-Hant",
+  "display": "standalone",
+  "background_color": "#140b1a",
+  "theme_color": "#140b1a",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
